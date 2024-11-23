@@ -62,6 +62,8 @@ fun NoteApp() {
 
 }
 
+//hejjjjj ny
+
 @Composable
 fun NoteList(navContoller: NavController, notes: MutableList<Note>) {
     TODO("Not yet implemented")
