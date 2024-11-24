@@ -33,6 +33,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
@@ -42,6 +45,7 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,6 +59,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.rezanoteapp.ui.theme.RezaNoteAppTheme
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import org.intellij.lang.annotations.JdkConstants.HorizontalAlignment
 
@@ -133,7 +138,7 @@ fun NoteList(navController: NavController, notes: MutableList<Note>) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth() // Gör att linjen fyller hela bredden
-                        .height(3.dp) // Höjden på linjen
+                        .height(1.dp) // Höjden på linjen
                         .background(Color.Gray) // Färgen på linjen
                 )
                 ListItem(
@@ -177,8 +182,11 @@ fun NoteList(navController: NavController, notes: MutableList<Note>) {
 fun AddNote(navController: NavController, notes: MutableList<Note>) {
     var title by remember { mutableStateOf("") }
     var detail by remember { mutableStateOf("") }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("Add Note", modifier = Modifier.wrapContentSize(Alignment.Center)) },
@@ -186,10 +194,28 @@ fun AddNote(navController: NavController, notes: MutableList<Note>) {
                 navigationIcon = {
                     IconButton(
                         onClick = {
-                            if (title.isNotBlank() && detail.isNotBlank()) {
-                                notes.add(Note(id = notes.size, title = title, detail = detail))
-                                navController.popBackStack()
+                            if (title.length !in 3 .. 20) {
+                                scope.launch {
+                                    snackbarHostState.showSnackbar(message = "Title must be between 3 and 20 characters",
+                                        duration = SnackbarDuration.Short
+                                    )
+                                }
+                                return@IconButton
                             }
+                            if(detail.length !in 5 .. 400) {
+                                scope.launch {
+                                    snackbarHostState.showSnackbar(
+                                        message = "Detail must be between 3 and 500 characters",
+                                        duration = SnackbarDuration.Short
+                                    )
+                                }
+                                return@IconButton
+                            }
+                    notes.add(Note(
+                        id = notes.size,
+                        title = title,
+                        detail = detail))
+                            navController.popBackStack()
                         }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
@@ -197,14 +223,14 @@ fun AddNote(navController: NavController, notes: MutableList<Note>) {
 
             )
         }
-    ){ padding ->
+    ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
-              horizontalAlignment = Alignment.CenterHorizontally,
+            horizontalAlignment = Alignment.CenterHorizontally,
 
-        )
+            )
         {
             TextField(
                 value = title,
@@ -221,16 +247,36 @@ fun AddNote(navController: NavController, notes: MutableList<Note>) {
             )
             Spacer(modifier = Modifier.height(2.dp))
             Button(onClick = {
-                if(title.isNotBlank() && detail.isNotBlank()) {
-                    notes.add(Note(id = notes.size, title = title, detail = detail))
-                    navController.popBackStack()
+                if (title.length !in 3..20) {
+                    scope.launch {
+                        snackbarHostState.showSnackbar(
+                            message = "Title must be 3-20 characters",
+                            duration = SnackbarDuration.Short
+                        )
+                    }
+                    return@Button
                 }
-                })
-            {
+                if (detail.length !in 5..400) {
+                    scope.launch {
+                        snackbarHostState.showSnackbar(
+                            message = "Detail must be 5-500 characters",
+                            duration = SnackbarDuration.Short
+                        )
+                    }
+                    return@Button
+                }
+                notes.add(
+                    Note(
+                        id = notes.size,
+                        title = title,
+                        detail = detail
+                    )
+                )
+                navController.popBackStack()
+            }) {
                 Text("Add Note")
             }
         }
-
     }
 }
 
@@ -255,8 +301,9 @@ fun NoteDetail(navController: NavController, notes: Note) {
     ) { padding ->
         Column(
             modifier = Modifier
+                .fillMaxSize()
                 .fillMaxWidth()
-                .padding(),
+                .padding(padding),
             horizontalAlignment = Alignment.CenterHorizontally
         )
         {
@@ -287,3 +334,4 @@ fun NoteDetail(navController: NavController, notes: Note) {
         }
     }
 }
+
