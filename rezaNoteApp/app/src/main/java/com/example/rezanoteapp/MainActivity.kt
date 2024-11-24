@@ -15,8 +15,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -43,6 +45,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
@@ -57,8 +60,8 @@ import org.intellij.lang.annotations.JdkConstants.HorizontalAlignment
 
 data class Note(
     val id: Int,
-    val title: String,
-    val detail: String,
+    var title: String,
+    var detail: String,
     val check : MutableState<Boolean> = mutableStateOf(false)
 )
 
@@ -77,19 +80,19 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun NoteApp() {
-    val navContoller = rememberNavController()
-    val notes = mutableListOf<Note>()
-    NavHost(navController = navContoller, startDestination = "home") {
-        composable("NoteApp") {
-            NoteList(navContoller, notes)
+    val navController = rememberNavController()
+    val notes = remember {mutableListOf<Note>()}
+    NavHost(navController = navController, startDestination = "notes") {
+        composable("notes") {
+            NoteList(navController, notes)
         }
         composable("addNote") {
-            AddNote(navContoller, notes)
+            AddNote(navController, notes)
         }
         composable("detail/{noteId}") {
             val itemId = it.arguments?.getString("noteId")?.toIntOrNull()
             val note = notes.find { it.id == itemId }
-            note?.let { NoteDetail(navContoller, it) }
+            note?.let { NoteDetail(navController, it) }
 
         }
 
@@ -104,26 +107,29 @@ fun NoteApp() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NoteList(navContoller: NavController, notes: MutableList<Note>) {
+fun NoteList(navController: NavController, notes: MutableList<Note>) {
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Note App")  },
                 colors = TopAppBarDefaults
 
-                    .topAppBarColors(containerColor = Color.Green, titleContentColor = MaterialTheme.colorScheme.onPrimary)
+                    .topAppBarColors(containerColor = Color.Green, titleContentColor = MaterialTheme.colorScheme.onPrimary),
+                modifier = Modifier.clip(RoundedCornerShape(6.dp))
             )
 
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { navContoller.navigate("addNote") }) {
+            FloatingActionButton(onClick = { navController.navigate("addNote") }) {
                 Icon(Icons.Default.Add, contentDescription = "Add")
+
             }
+
         }
 
     ) { padding ->
         LazyColumn(modifier = Modifier.padding(padding)) {
-            items(notes) { item ->
+            items(notes.sortedBy { it.title}) { item ->
                 Box(
                     modifier = Modifier
                         .fillMaxWidth() // Gör att linjen fyller hela bredden
@@ -143,7 +149,7 @@ fun NoteList(navContoller: NavController, notes: MutableList<Note>) {
                     trailingContent = {
                         Row {
                             IconButton(
-                                onClick = { navContoller.navigate("detail/${item.id}")}
+                                onClick = { navController.navigate("detail/${item.id}")}
                             ) {
                                 Icon ( Icons.Filled.Edit , contentDescription = "Edit Note")
                             }
@@ -168,25 +174,27 @@ fun NoteList(navContoller: NavController, notes: MutableList<Note>) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddNote(navContoller: NavController, notes: MutableList<Note>) {
+fun AddNote(navController: NavController, notes: MutableList<Note>) {
     var title by remember { mutableStateOf("") }
     var detail by remember { mutableStateOf("") }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Add Note") },
+                title = { Text("Add Note", modifier = Modifier.wrapContentSize(Alignment.Center)) },
+
                 navigationIcon = {
                     IconButton(
                         onClick = {
                             if (title.isNotBlank() && detail.isNotBlank()) {
                                 notes.add(Note(id = notes.size, title = title, detail = detail))
-                                navContoller.popBackStack()
+                                navController.popBackStack()
                             }
                         }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 }
+
             )
         }
     ){ padding ->
@@ -194,30 +202,32 @@ fun AddNote(navContoller: NavController, notes: MutableList<Note>) {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
-            //horizontalAlignment = Alignment.CenterHorizontally,
-            //verticalArrangement = Arrangement.Center
+              horizontalAlignment = Alignment.CenterHorizontally,
+
         )
         {
             TextField(
                 value = title,
                 onValueChange = { title = it },
-                label = { Text("Title") }
+                label = { Text("Title") },
+                modifier = Modifier.padding(16.dp).fillMaxWidth()
             )
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(2.dp))
             TextField(
                 value = detail,
                 onValueChange = { detail = it },
-                label = { Text("Details") }
+                label = { Text("Details") },
+                modifier = Modifier.padding(16.dp).fillMaxWidth()
             )
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(2.dp))
             Button(onClick = {
                 if(title.isNotBlank() && detail.isNotBlank()) {
                     notes.add(Note(id = notes.size, title = title, detail = detail))
-                    navContoller.popBackStack()
+                    navController.popBackStack()
                 }
                 })
             {
-                Text("Save")
+                Text("Add Note")
             }
         }
 
@@ -225,7 +235,55 @@ fun AddNote(navContoller: NavController, notes: MutableList<Note>) {
 }
 
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NoteDetail(navContoller: NavController, notes: Note) {
+fun NoteDetail(navController: NavController, notes: Note) {
+    var title by remember { mutableStateOf(notes.title) }
+    var detail by remember { mutableStateOf(notes.detail) }
 
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Note Detail") },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        )
+        {
+            TextField(
+                value = title,
+                onValueChange = { title = it },
+                label = { Text("Title") },
+                modifier = Modifier.padding(16.dp).fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            TextField(
+                value = detail,
+                onValueChange = { detail = it },
+                label = { Text("Details") },
+                modifier = Modifier.padding(16.dp).fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(onClick = {
+                if (title.isNotBlank() && detail.isNotBlank()) {
+                    notes.title = title
+                    notes.detail = detail
+                    navController.popBackStack()
+                }
+            })
+            {
+                Text("Done")
+            }
+        }
+    }
 }
