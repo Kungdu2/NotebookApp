@@ -5,12 +5,11 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -18,13 +17,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -43,6 +46,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -50,9 +54,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewFontScale
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
@@ -60,8 +65,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.rezanoteapp.ui.theme.RezaNoteAppTheme
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Semaphore
-import org.intellij.lang.annotations.JdkConstants.HorizontalAlignment
+
 
 data class Note(
     val id: Int,
@@ -86,7 +90,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun NoteApp() {
     val navController = rememberNavController()
-    val notes = remember {mutableListOf<Note>()}
+    val notes = remember {mutableStateListOf<Note>()}
     NavHost(navController = navController, startDestination = "notes") {
         composable("notes") {
             NoteList(navController, notes)
@@ -95,7 +99,8 @@ fun NoteApp() {
             AddNote(navController, notes)
         }
         composable("detail/{noteId}") {
-            val itemId = it.arguments?.getString("noteId")?.toIntOrNull()
+            backStackEntry ->
+            val itemId = backStackEntry.arguments?.getString("noteId")?.toIntOrNull()
             val note = notes.find { it.id == itemId }
             note?.let { NoteDetail(navController, it) }
 
@@ -109,7 +114,20 @@ fun NoteApp() {
 
 
 //hejjjjj ny
-
+//@Preview(showBackground = true)
+//@Composable
+//fun PreviewNoteList() {
+//    val mockNavController = rememberNavController()
+//    val mockNotes = remember {
+//        mutableStateListOf(
+//            Note(id = 0, title = "Grocery List", detail = "Milk, eggs, bread, cheese"),
+//            Note(id = 1, title = "Meeting Notes", detail = "Discuss project progress with team"),
+//            Note(id = 2, title = "Travel Plans", detail = "Book flights and hotels for vacation")
+//        )
+//    }
+//
+//    NoteList(navController = mockNavController, notes = mockNotes)
+//}
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NoteList(navController: NavController, notes: MutableList<Note>) {
@@ -125,7 +143,8 @@ fun NoteList(navController: NavController, notes: MutableList<Note>) {
 
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { navController.navigate("addNote") }) {
+            FloatingActionButton(onClick = { navController.navigate("addNote") },
+                containerColor = Color.Green) {
                 Icon(Icons.Default.Add, contentDescription = "Add")
 
             }
@@ -138,15 +157,15 @@ fun NoteList(navController: NavController, notes: MutableList<Note>) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth() // Gör att linjen fyller hela bredden
-                        .height(1.dp) // Höjden på linjen
+                        .height(5.dp) // Höjden på linjen
                         .background(Color.Gray) // Färgen på linjen
                 )
                 ListItem(
                     leadingContent = {
                         Checkbox(
                             checked = item.check.value,
-                            onCheckedChange = { isChecked ->
-                                item.check.value = isChecked
+                            onCheckedChange = {
+                                item.check.value = !item.check.value
                             })
                     },
                     headlineContent = { Text(item.title) },
@@ -169,13 +188,22 @@ fun NoteList(navController: NavController, notes: MutableList<Note>) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth() // Gör att linjen fyller hela bredden
-                        .height(1.dp) // Höjden på linjen
+                        .height(5.dp) // Höjden på linjen
                         .background(Color.Gray) // Färgen på linjen
                 )
             }
         }
     }
 }
+
+//@Preview(showBackground = true)
+//@Composable
+//fun PreviewAddNote() {
+//    val mockNavController = rememberNavController() // Mock av NavController
+//    val mockNotes = remember { mutableListOf<Note>() } // Mocklista för anteckningar
+//
+//    AddNote(navController = mockNavController, notes = mockNotes)
+//}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -189,7 +217,7 @@ fun AddNote(navController: NavController, notes: MutableList<Note>) {
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text("Add Note", modifier = Modifier.wrapContentSize(Alignment.Center)) },
+                title = { Text("Add Note")},
 
                 navigationIcon = {
                     IconButton(
@@ -211,10 +239,7 @@ fun AddNote(navController: NavController, notes: MutableList<Note>) {
                                 }
                                 return@IconButton
                             }
-                    notes.add(Note(
-                        id = notes.size,
-                        title = title,
-                        detail = detail))
+                            notes.add(Note(id = notes.size, title = title, detail = detail))
                             navController.popBackStack()
                         }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -236,50 +261,80 @@ fun AddNote(navController: NavController, notes: MutableList<Note>) {
                 value = title,
                 onValueChange = { title = it },
                 label = { Text("Title") },
-                modifier = Modifier.padding(16.dp).fillMaxWidth()
+                modifier = Modifier
+                    .padding(horizontal = 16.dp, vertical = 1.dp)
+                    .fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp)
             )
-            Spacer(modifier = Modifier.height(2.dp))
-            TextField(
-                value = detail,
-                onValueChange = { detail = it },
-                label = { Text("Details") },
-                modifier = Modifier.padding(16.dp).fillMaxWidth()
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Button(onClick = {
-                if (title.length !in 3..20) {
-                    scope.launch {
-                        snackbarHostState.showSnackbar(
-                            message = "Title must be 3-20 characters",
-                            duration = SnackbarDuration.Short
-                        )
-                    }
-                    return@Button
-                }
-                if (detail.length !in 5..400) {
-                    scope.launch {
-                        snackbarHostState.showSnackbar(
-                            message = "Detail must be 5-400 characters",
-                            duration = SnackbarDuration.Short
-                        )
-                    }
-                    return@Button
-                }
-                notes.add(
-                    Note(
-                        id = notes.size,
-                        title = title,
-                        detail = detail
-                    )
+            Spacer(modifier = Modifier.height(0.dp)) // andra till 0 dp
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .verticalScroll(rememberScrollState()),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+
+            ) {
+                TextField(
+                    value = detail,
+                    onValueChange = { detail = it },
+                    label = { Text("Details") },
+                    modifier = Modifier
+                        .padding(vertical = 8.dp)
+                        .fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
                 )
-                navController.popBackStack()
-            }) {
-                Text("Add Note")
+                //Spacer(modifier = Modifier.height(2.dp)) // kommentera bort
+                Button(
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Green),
+                    onClick = {
+                        if (title.length !in 3..20) {
+                            scope.launch {
+                                snackbarHostState.showSnackbar(
+                                    message = "Title must be 3-20 characters",
+                                    duration = SnackbarDuration.Short
+                                )
+                            }
+                            return@Button
+                        }
+                        if (detail.length !in 5..400) {
+                            scope.launch {
+                                snackbarHostState.showSnackbar(
+                                    message = "Detail must be 5-400 characters",
+                                    duration = SnackbarDuration.Short
+                                )
+                            }
+                            return@Button
+                        }
+                        notes.add(
+                            Note(
+                                id = notes.size,
+                                title = title,
+                                detail = detail
+                            )
+                        )
+                        navController.popBackStack()
+                    }) {
+                    Text("Add Note", color = Color.Black)
+                }
             }
         }
     }
 }
 
+//@Preview(showBackground = true)
+//@Composable
+//fun PreviewNoteDetail() {
+//    val mockNavController = rememberNavController() // Mockad NavController
+//    val exampleNote = Note(
+//        id = 1,
+//        title = "Example Note",
+//        detail = "This is an example note detail"
+//    ) // Mockad Note
+//
+//    NoteDetail(navController = mockNavController, notes = exampleNote)
+//}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -293,7 +348,7 @@ fun NoteDetail(navController: NavController, notes: Note) {
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text("Note Detail") },
+                title = { Text("Edit Note") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -313,43 +368,63 @@ fun NoteDetail(navController: NavController, notes: Note) {
             TextField(
                 value = title,
                 onValueChange = { title = it },
-                label = { Text("Title") },
-                modifier = Modifier.padding(16.dp).fillMaxWidth()
+                label = { Text("Title")},
+                modifier = Modifier
+                    .padding(horizontal = 16.dp, vertical = 1.dp)
+                    .fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp)
             )
-            Spacer(modifier = Modifier.height(16.dp))
-            TextField(
-                value = detail,
-                onValueChange = { detail = it },
-                label = { Text("Details") },
-                modifier = Modifier.padding(16.dp).fillMaxWidth()
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Button(onClick = {
-                if (title.length !in 3..20) {
-                    scope.launch {
-                        snackbarHostState.showSnackbar(
-                            message = "Title must be 3-20 characters",
-                            duration = SnackbarDuration.Short
-                        )
-                    }
-                    return@Button
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally,
+
+                ){
+//Spacer(modifier = Modifier.height(1.dp))
+                TextField(
+                    value = detail,
+                    onValueChange = { detail = it },
+                    label = { Text("Details") },
+                    modifier = Modifier
+                        .padding(vertical = 8.dp)
+                        .fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp)
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors( containerColor = Color.Green),
+                    onClick = {
+                        if (title.length !in 3..20) {
+                            scope.launch {
+                                snackbarHostState.showSnackbar(
+                                    message = "Title must be 3-20 characters",
+                                    duration = SnackbarDuration.Short
+                                )
+                            }
+                            return@Button
+                        }
+                        if (detail.length !in 5..400) {
+                            scope.launch {
+                                snackbarHostState.showSnackbar(
+                                    message = "Detail must be 5-400 characters",
+                                    duration = SnackbarDuration.Short
+                                )
+                            }
+                            return@Button
+                        }
+                        notes.title = title
+                        notes.detail = detail
+                        navController.popBackStack()
+                    })
+                {
+                    Text("Done", color = Color.Black)
                 }
-                if (detail.length !in 5..400) {
-                    scope.launch {
-                        snackbarHostState.showSnackbar(
-                            message = "Detail must be 5-400 characters",
-                            duration = SnackbarDuration.Short
-                        )
-                    }
-                    return@Button
-                }
-                notes.title = title
-                notes.detail = detail
-                navController.popBackStack()
-            })
-            {
-                Text("Done")
             }
+
         }
     }
 }
