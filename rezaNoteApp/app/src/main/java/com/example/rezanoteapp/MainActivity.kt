@@ -259,7 +259,7 @@ fun AddNote(navController: NavController, notes: MutableList<Note>) {
                 if (detail.length !in 5..400) {
                     scope.launch {
                         snackbarHostState.showSnackbar(
-                            message = "Detail must be 5-500 characters",
+                            message = "Detail must be 5-400 characters",
                             duration = SnackbarDuration.Short
                         )
                     }
@@ -286,8 +286,11 @@ fun AddNote(navController: NavController, notes: MutableList<Note>) {
 fun NoteDetail(navController: NavController, notes: Note) {
     var title by remember { mutableStateOf(notes.title) }
     var detail by remember { mutableStateOf(notes.detail) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("Note Detail") },
@@ -322,11 +325,27 @@ fun NoteDetail(navController: NavController, notes: Note) {
             )
             Spacer(modifier = Modifier.height(16.dp))
             Button(onClick = {
-                if (title.isNotBlank() && detail.isNotBlank()) {
-                    notes.title = title
-                    notes.detail = detail
-                    navController.popBackStack()
+                if (title.length !in 3..20) {
+                    scope.launch {
+                        snackbarHostState.showSnackbar(
+                            message = "Title must be 3-20 characters",
+                            duration = SnackbarDuration.Short
+                        )
+                    }
+                    return@Button
                 }
+                if (detail.length !in 5..400) {
+                    scope.launch {
+                        snackbarHostState.showSnackbar(
+                            message = "Detail must be 5-400 characters",
+                            duration = SnackbarDuration.Short
+                        )
+                    }
+                    return@Button
+                }
+                notes.title = title
+                notes.detail = detail
+                navController.popBackStack()
             })
             {
                 Text("Done")
